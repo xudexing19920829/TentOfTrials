@@ -39,6 +39,13 @@ import { v4 as uuidv4 } from 'uuid';
 // TYPES
 // ---------------------------------------------------------------------------
 
+interface LayoutShift extends PerformanceEntry {
+  value: number;
+  hadRecentInput: boolean;
+  sources: Array<{ node?: Node; rect?: DOMRect; }>;
+}
+
+
 export type TelemetryEventType =
   | 'page_view'
   | 'page_navigation'
@@ -205,7 +212,7 @@ function createEvent(
 }
 
 function getTransportType(): TransportType {
-  if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+  if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
     return 'beacon';
   }
   if (typeof fetch !== 'undefined') {

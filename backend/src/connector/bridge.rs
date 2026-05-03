@@ -35,8 +35,10 @@ use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 use std::thread;
+use std::os::raw::{c_int, c_uint, c_ulong};
 
 use super::ffi;
+use super::ffi::ConnectorError;
 use super::types::*;
 
 // ---------------------------------------------------------------------------
@@ -216,10 +218,10 @@ pub struct ConnectorBridge {
     circuit_breaker: CircuitBreaker,
     stats: Mutex<BridgeStats>,
     health_check_handle: Mutex<Option<thread::JoinHandle<()>>>,
-    shutdown_flag: AtomicBool,
+    shutdown_flag: Arc<AtomicBool>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 struct BridgeStats {
     total_operations: u64,
     successful_operations: u64,
@@ -238,7 +240,7 @@ impl ConnectorBridge {
             circuit_breaker: CircuitBreaker::new(),
             stats: Mutex::new(BridgeStats::default()),
             health_check_handle: Mutex::new(None),
-            shutdown_flag: AtomicBool::new(false),
+            shutdown_flag: Arc::new(AtomicBool::new(false)),
         }
     }
 

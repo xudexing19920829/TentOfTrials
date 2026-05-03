@@ -260,7 +260,8 @@ impl AiOrchestrator {
         let mut buffer = self.telemetry_buffer.write().await;
         buffer.push(event);
         if buffer.len() > 10_000 {
-            buffer.drain(0..buffer.len() - 10_000);
+            let len = buffer.len();
+            buffer.drain(0..len - 10_000);
         }
         debug!("telemetry buffer size: {}", buffer.len());
     }

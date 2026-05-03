@@ -108,7 +108,7 @@ export function AssetSelector({
   );
 
   // Filter and search assets
-  const { filteredAssets, groups } = useMemo(() => {
+  const { filteredAssets, groups }: { filteredAssets: Asset[]; groups: AssetGroup[] } = useMemo(() => {
     let filtered = [...assets];
 
     if (showFavoritesOnly) {
@@ -147,12 +147,12 @@ export function AssetSelector({
       }
     }
 
-    return { filteredAssets: filtered, groups };
+    return { filteredAssets: filtered, groups: grouped };
   }, [assets, searchQuery, showFavoritesOnly, showGroups]);
 
   // Flatten for keyboard navigation
   const flatList = useMemo(
-    () => groups.length > 0 ? groups.flatMap(g => g.assets) : filteredAssets,
+    () => groups.length > 0 ? groups.flatMap((g: AssetGroup) => g.assets) : filteredAssets,
     [groups, filteredAssets]
   );
 
@@ -471,7 +471,7 @@ export function AssetSelector({
               }}
             >
               {groups.length > 0 ? (
-                groups.map(group => (
+                groups.map((group: AssetGroup) => (
                   <div key={group.label}>
                     <div style={{
                       padding: '4px 8px',
@@ -483,14 +483,14 @@ export function AssetSelector({
                     }}>
                       {group.label}
                     </div>
-                    {group.assets.map((asset, i) => {
+                    {group.assets.map((asset: Asset, i: number) => {
                       const globalIndex = flatList.indexOf(asset);
                       return renderAsset(asset, globalIndex);
                     })}
                   </div>
                 ))
               ) : (
-                filteredAssets.map((asset, i) => renderAsset(asset, i))
+                filteredAssets.map((asset: Asset, i: number) => renderAsset(asset, i))
               )}
             </div>
           )}

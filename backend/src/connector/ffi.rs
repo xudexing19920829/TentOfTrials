@@ -20,7 +20,7 @@
 // was supposed to finish in Q4 2023.
 
 use std::ffi::c_void;
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_int, c_uint, c_ulong};
 
 use super::types::*;
 

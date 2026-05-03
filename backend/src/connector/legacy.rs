@@ -33,7 +33,7 @@
 
 use std::convert::TryFrom;
 use std::ffi::CString;
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_ulong};
 
 use super::types::*;
 use super::ffi;
@@ -292,7 +292,7 @@ impl V1Connector {
         buffer.size = total_size as c_ulong;
         buffer.encoding = DataEncoding::Legacy;
 
-        Ok(buffer)
+        Ok(unsafe { std::ptr::read(c_buffer) })
     }
 
     fn buffer_to_v1(&self, buffer: &ConnectorBuffer) -> Result<(V1MessageType, Vec<u8>), String> {

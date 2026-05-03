@@ -299,23 +299,23 @@ export const TradingChart = forwardRef<ChartRef, TradingChartProps>(function Tra
     const mergedConfig = mergeChartConfig(DEFAULT_CHART_CONFIG, chartConfig, theme);
 
     // Dynamic import of lightweight-charts to avoid issues with SSR
-    import('lightweight-charts').then(({ createChart }) => {
+    import('lightweight-charts').then(({ createChart, CandlestickSeries, HistogramSeries }) => {
       if (!containerRef.current) return;
 
       const chart = createChart(containerRef.current, {
         width: container.clientWidth,
         height,
-        layout: mergedConfig.layout,
+        layout: mergedConfig.layout as any,
         grid: mergedConfig.grid,
-        crosshair: mergedConfig.crosshair,
+        crosshair: mergedConfig.crosshair as any,
         timeScale: mergedConfig.timeScale,
-        rightPriceScale: mergedConfig.rightPriceScale,
+        rightPriceScale: mergedConfig.rightPriceScale as any,
       });
 
       chartRef.current = chart;
 
       // Main candlestick series
-      const series = chart.addCandlestickSeries({
+      const series = chart.addSeries(CandlestickSeries, {
         upColor: '#22c55e',
         downColor: '#ef4444',
         borderUpColor: '#22c55e',
@@ -326,7 +326,7 @@ export const TradingChart = forwardRef<ChartRef, TradingChartProps>(function Tra
       seriesRef.current = series;
 
       // Volume series (histogram)
-      const volumeSeries = chart.addHistogramSeries({
+      const volumeSeries = chart.addSeries(HistogramSeries, {
         priceFormat: { type: 'volume' },
         priceScaleId: 'volume',
         color: '#3b82f6',
@@ -338,12 +338,12 @@ export const TradingChart = forwardRef<ChartRef, TradingChartProps>(function Tra
 
       // Set initial data
       if (data.length > 0) {
-        series.setData(data);
+        series.setData(data as any);
         volumeSeries.setData(data.map(c => ({
           time: c.time,
           value: c.volume,
           color: c.close >= c.open ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)',
-        })));
+        })) as any);
       }
 
       // Crosshair move handler
@@ -400,7 +400,7 @@ export const TradingChart = forwardRef<ChartRef, TradingChartProps>(function Tra
   // Update data when prop changes
   useEffect(() => {
     if (seriesRef.current && data.length > 0) {
-      seriesRef.current.setData(data);
+      seriesRef.current.setData(data as any);
     }
     if (volumeSeriesRef.current && data.length > 0) {
       volumeSeriesRef.current.setData(data.map(c => ({

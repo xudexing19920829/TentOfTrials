@@ -257,7 +257,7 @@ impl EmbeddingEngine for OpenAiEmbedder {
             let index = entry["index"].as_u64().unwrap_or(0) as usize;
             let vector: Vec<f64> = entry["embedding"]
                 .as_array()
-                .unwrap_or(&serde_json::Value::Null)
+                .unwrap_or(&vec![])
                 .iter()
                 .map(|v| v.as_f64().unwrap_or(0.0))
                 .collect();

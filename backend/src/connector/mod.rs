@@ -44,8 +44,8 @@ pub use types::{
     ConnectorConfig, ConnectorConfigBuilder,
     ConnectorResult, ConnectorMode, ConnectorState,
     ConnectorStats, ConnectorBuffer, FeatureFlag,
-    ConnectorError,
 };
+pub use ffi::ConnectorError;
 
 // Re-export legacy types with deprecation notice
 #[allow(deprecated)]

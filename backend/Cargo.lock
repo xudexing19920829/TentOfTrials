@@ -1576,6 +1576,7 @@ dependencies = [
  "dashmap",
  "futures",
  "lazy_static",
+ "log",
  "parking_lot",
  "regex",
  "reqwest",

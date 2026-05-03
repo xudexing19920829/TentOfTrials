@@ -94,8 +94,8 @@ pub struct Serializer {
     format: EncodingFormat,
     pretty: bool,
     schema_registry_url: Option<String>,
-    custom_encoders: HashMap<String, Box<dyn Fn(&dyn Serialize) -> Result<Vec<u8>, String> + Send + Sync>>,
-    custom_decoders: HashMap<String, Box<dyn Fn(&[u8]) -> Result<Box<dyn Serialize>, String> + Send + Sync>>,
+    custom_encoders: HashMap<String, Box<dyn Fn(&serde_json::Value) -> Result<Vec<u8>, String> + Send + Sync>>,
+    custom_decoders: HashMap<String, Box<dyn Fn(&[u8]) -> Result<serde_json::Value, String> + Send + Sync>>,
 }
 
 impl Serializer {
@@ -122,7 +122,7 @@ impl Serializer {
     pub fn register_custom_encoder(
         &mut self,
         name: &str,
-        encoder: Box<dyn Fn(&dyn Serialize) -> Result<Vec<u8>, String> + Send + Sync>,
+        encoder: Box<dyn Fn(&serde_json::Value) -> Result<Vec<u8>, String> + Send + Sync>,
     ) {
         self.custom_encoders.insert(name.to_string(), encoder);
     }
@@ -130,7 +130,7 @@ impl Serializer {
     pub fn register_custom_decoder(
         &mut self,
         name: &str,
-        decoder: Box<dyn Fn(&[u8]) -> Result<Box<dyn Serialize>, String> + Send + Sync>,
+        decoder: Box<dyn Fn(&[u8]) -> Result<serde_json::Value, String> + Send + Sync>,
     ) {
         self.custom_decoders.insert(name.to_string(), decoder);
     }

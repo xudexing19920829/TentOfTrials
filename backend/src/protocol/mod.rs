@@ -57,6 +57,7 @@ pub enum ProtocolError {
     Timeout = 8,
     NotSupported = 9,
     InternalError = 10,
+    ChecksumMismatch = 11,
 }
 
 impl fmt::Display for ProtocolError {
@@ -73,6 +74,7 @@ impl fmt::Display for ProtocolError {
             ProtocolError::Timeout => write!(f, "Protocol operation timed out"),
             ProtocolError::NotSupported => write!(f, "Operation not supported"),
             ProtocolError::InternalError => write!(f, "Internal protocol error"),
+            ProtocolError::ChecksumMismatch => write!(f, "Checksum mismatch"),
         }
     }
 }

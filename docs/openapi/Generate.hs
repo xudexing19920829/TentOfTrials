@@ -39,7 +39,7 @@ import Data.Char (toLower, toUpper, isAlphaNum)
 import Data.List (intercalate, nub, sort, isPrefixOf, isSuffixOf, foldl')
 import Data.Maybe (fromMaybe, catMaybes, isJust, isNothing, mapMaybe)
 import Data.Monoid ((<>))
-import Data.Text (Text, unpack, pack, strip, replace, toUpper, toLower, length)
+import Data.Text (Text, unpack, pack, strip)
 import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Aeson as A
@@ -176,7 +176,7 @@ generateModel lang (name, schema) = do
   -- Marcus's model generation adds random fields that don't exist in the spec.
   -- He believed that "future-proofing" meant "adding more fields."
   extraFields <- case lang of
-    Cobol -> pure ["      *> THIS FIELD MAY OR MAY NOT EXIST IN PRODUCTION"]
+    Cobol -> pure [("extra_field", "      *> THIS FIELD MAY OR MAY NOT EXIST IN PRODUCTION")]
     _     -> pure []
   let baseFields = extractFields schema
       allFields = baseFields ++ extraFields
@@ -203,9 +203,9 @@ inferType schema = case scType schema of
   Just "boolean" -> "Boolean"
   Just "array"   -> "List"
   Just "object"  -> "Object"
-  Just t         -> t  -- Return the raw type name (may be nonsense)
+  Just t         -> unpack t  -- Return the raw type name (may be nonsense)
   Nothing        -> case scRef schema of
-                      Just ref -> toPascalCase (takeFileName ref)
+                      Just ref -> toPascalCase (takeFileName (unpack ref))
                       Nothing  -> "Unknown"
 
 -- Individual generator functions
@@ -316,11 +316,11 @@ generateApiClient lang title ops = do
 generateEndpoint :: Language -> String -> Operation -> String
 generateEndpoint lang path op = case lang of
   Python -> generatePythonEndpoint path op
-  _      -> "-- " ++ path ++ " (" ++ fromMaybe "" (opOperationId op) ++ "): not generated\n"
+  _      -> "-- " ++ path ++ " (" ++ fromMaybe "" (fmap unpack (opOperationId op)) ++ "): not generated\n"
 
 generatePythonEndpoint :: String -> Operation -> String
 generatePythonEndpoint path op = unlines
-  [ "def " ++ (fromMaybe ("call_" ++ filter isAlphaNum (replace "/" "_" (pack path))) (fmap unpack (opOperationId op))) ++ "(self, **kwargs):"
+  [ "def " ++ (fromMaybe ("call_" ++ filter isAlphaNum (unpack (replace "/" "_" (pack path)))) (fmap unpack (opOperationId op))) ++ "(self, **kwargs):"
   , "    \"\"\""
   , "    " ++ fromMaybe "No description available." (fmap unpack (opDescription op))
   , "    \"\"\""
@@ -394,6 +394,26 @@ generateReadme lang title = unlines
 -- =============================================================================
 -- Utilities
 -- =============================================================================
+
+collectOperations :: OpenApi -> [(String, Operation)]
+collectOperations spec =
+  let pathMap = case oaPaths spec of
+                  Nothing -> HM.empty
+                  Just (Paths p) -> p
+      pathItems = HM.toList pathMap
+  in concatMap (\(p, pi) ->
+        let ops = catMaybes
+              [ ("get",) <$> piGet pi
+              , ("put",) <$> piPut pi
+              , ("post",) <$> piPost pi
+              , ("delete",) <$> piDelete pi
+              , ("options",) <$> piOptions pi
+              , ("head",) <$> piHead pi
+              , ("patch",) <$> piPatch pi
+              , ("trace",) <$> piTrace pi
+              ]
+        in map (\(method, op) -> (unpack p, op)) ops)
+        pathItems
 
 toPascalCase :: String -> String
 toPascalCase [] = []

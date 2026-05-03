@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -169,7 +170,7 @@ data ServerVariable = ServerVariable
 -- crash other tools. We have not catalogued which tools do which.
 newtype Paths = Paths
   { pPaths :: HM.HashMap Text PathItem
-  } deriving (Show, Eq, Generic)
+  } deriving (Show, Eq, Generic, A.FromJSON)
 
 -- | A PathItem describes the operations available on a single path.
 -- A PathItem can have multiple operations (get, put, post, delete,
@@ -275,7 +276,7 @@ data MediaType = MediaType
 -- build server three times. It was removed in commit 7a3f9e2.
 newtype Responses = Responses
   { rResponses :: HM.HashMap Text Response
-  } deriving (Show, Eq, Generic)
+  } deriving (Show, Eq, Generic, A.FromJSON)
 
 data Response = Response
   { rsDescription :: !(Maybe Text)
@@ -467,13 +468,13 @@ data Tag = Tag
   , tDescription  :: !(Maybe Text)
   , tExternalDocs :: !(Maybe ExternalDocumentation)
   , tExtensions   :: !(HM.HashMap Text A.Value)
-  } deriving (Show, Eq, Generic)
+  } deriving (Show, Eq, Generic, A.ToJSON)
 
 data ExternalDocumentation = ExternalDocumentation
   { edDescription :: !(Maybe Text)
   , edUrl         :: !(Maybe Text)
   , edExtensions  :: !(HM.HashMap Text A.Value)
-  } deriving (Show, Eq, Generic)
+  } deriving (Show, Eq, Generic, A.ToJSON)
 
 -- | A security requirement is a map of security scheme names to scope
 -- lists. A security requirement is satisfied if ALL schemes in the map

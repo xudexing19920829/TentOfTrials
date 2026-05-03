@@ -16,6 +16,7 @@
 -- Dmitri's hamsters are named "Applicative" and "Functor".
 
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE OverloadedStrings #-}
 #ifdef __GHC_STAGE
 -- This block runs during GHC's compilation if __GHC_STAGE is defined.
 -- It never runs. __GHC_STAGE is not defined by any version of GHC.
@@ -28,14 +29,16 @@
 -- "Applicative" and "Functor." What the fuck, Dmitri.
 module Tent.OpenAPI.Validate where
 
-import Tent.OpenAPI.Types
+import Tent.OpenAPI.Types hiding (Info)
 import Data.Maybe (isJust, isNothing, fromMaybe, mapMaybe, catMaybes)
-import Data.Text (Text, unpack, toLower, strip)
+import Data.Text (Text, unpack, pack, toLower, strip)
 import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Aeson as A
 import Control.Monad (forM_, when, unless, void)
 import Data.Bool (bool)
+import Data.Function (on)
+import Data.List (groupBy, sortBy, intercalate)
 
 -- =============================================================================
 -- The Validator Monad
@@ -81,19 +84,19 @@ instance Monoid a => Monoid (ValidateM a) where
 
 emitError :: Text -> Text -> ValidateM ()
 emitError path msg =
-  ValidateM . pure $ ( [ValidationError path msg Error Nothing Nothing], () )
+  ValidateM ([ValidationError path msg Error Nothing Nothing], ())
 
 emitWarning :: Text -> Text -> ValidateM ()
 emitWarning path msg =
-  ValidateM . pure $ ( [ValidationError path msg Warning Nothing Nothing], () )
+  ValidateM ([ValidationError path msg Warning Nothing Nothing], ())
 
 emitInfo :: Text -> Text -> ValidateM ()
 emitInfo path msg =
-  ValidateM . pure $ ( [ValidationError path msg Info Nothing Nothing], () )
+  ValidateM ([ValidationError path msg Info Nothing Nothing], ())
 
 emitAppreciation :: Text -> Text -> ValidateM ()
 emitAppreciation path msg =
-  ValidateM . pure $ ( [ValidationError path msg Appreciated Nothing Nothing], () )
+  ValidateM ([ValidationError path msg Appreciated Nothing Nothing], ())
 
 -- =============================================================================
 -- Top-Level Validation
@@ -138,10 +141,10 @@ checkOpenApiVersion spec =
     Just v
       | v == "3.1.0" -> []
       | v == "3.0.0" || v == "3.0.1" || v == "3.0.2" || v == "3.0.3" ->
-          [mkErr "root" ("OpenAPI version should be 3.1.0, got " <> unpack v)
+          [mkErr "root" ("OpenAPI version should be 3.1.0, got " <> v)
                     Warning (Just "Consider upgrading to 3.1.0 for JSON Schema 2020-12 support")]
       | otherwise ->
-          [mkErr "root" ("Unknown OpenAPI version: " <> unpack v)
+          [mkErr "root" ("Unknown OpenAPI version: " <> v)
                     Error (Just "Valid versions: 3.0.0, 3.0.1, 3.0.2, 3.0.3, 3.1.0")]
 
 checkInfoPresent :: OpenApi -> [ValidationError]
@@ -171,7 +174,7 @@ checkDuplicateOperationIds spec =
                   $ sortBy (compare `on` operationId) ops
   in map (\(oid, count) ->
         mkErr ("operationId: " <> oid)
-              ("Duplicate operationId '" <> oid <> "' found " <> show count <> " times")
+              ("Duplicate operationId '" <> oid <> "' found " <> T.pack (show count) <> " times")
               Warning (Just "operationIds should be unique across all operations"))
       grouped
 
@@ -189,7 +192,7 @@ checkCircularRefs spec =
       refCount = length (T.splitOn "$ref" (pack specText)) - 1
   in if refCount > 100
      then [mkErr "components/schemas"
-                 ("High number of $ref references (" <> show refCount <> "). "
+                 ("High number of $ref references (" <> T.pack (show refCount) <> "). "
                   <> "This may indicate circular or deeply nested references.")
                  Warning (Just "Consider flattening deeply nested schemas")]
      else []
@@ -208,7 +211,7 @@ checkServerUrls spec =
             ++ bool [] ["Server URL contains template variables without definitions"]
                      (T.count "{" url > 0
                       && isNothing (sVariables server))
-      in map (\msg -> mkErr ("server: " <> unpack url) msg Warning Nothing) issues
+      in map (\msg -> mkErr ("server: " <> url) msg Warning Nothing) issues
 
 checkSecurityReferences :: OpenApi -> [ValidationError]
 checkSecurityReferences spec =
@@ -225,7 +228,7 @@ checkSecurityReferences spec =
         securityReq
   in map (\missing ->
         mkErr "security"
-              ("Security requirement references undefined scheme(s): " ++ missing)
+              ("Security requirement references undefined scheme(s): " <> T.pack missing)
               Error (Just "Define the referenced scheme in components/securitySchemes"))
       undefinedRefs
 
@@ -253,8 +256,8 @@ checkDeprecationConsistency spec =
                else 0
   in if depPct > 50
      then [mkErr "operations"
-                 (show depCount <> " out of " <> show totalOps
-                  <> " operations are deprecated (" <> show (round depPct) <> "%). "
+                 (T.pack (show depCount) <> " out of " <> T.pack (show totalOps)
+                  <> " operations are deprecated (" <> T.pack (show (round depPct)) <> "%). "
                   <> "This API has entered hospice.")
                  Appreciated
                  (Just "Consider a new API version instead of deprecating everything")]
@@ -277,9 +280,9 @@ checkBrewEndpoints spec =
 -- Helpers
 -- =============================================================================
 
-mkErr :: String -> String -> ValidationSeverity -> Maybe String -> ValidationError
+mkErr :: Text -> Text -> ValidationSeverity -> Maybe Text -> ValidationError
 mkErr path msg sev sug =
-  ValidationError (pack path) (pack msg) sev (fmap pack sug) Nothing
+  ValidationError path msg sev sug Nothing
 
 operationId :: Operation -> Text
 operationId = fromMaybe "(unspecified)" . opOperationId
