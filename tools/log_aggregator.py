@@ -277,13 +277,15 @@ class LogAggregator:
             },
         }
 
-    def _get_time_range(self) -> Optional[Dict[str, str]]:
+    def _get_time_range(self) -> Optional[Dict[str, Any]]:
         timestamps = [
             e['timestamp'] for e in self.entries
             if e.get('timestamp')
         ]
         if not timestamps:
-            return None
+            # FIX: Return a dict with None values instead of bare None,
+            # so callers using .get() on the result won't crash.
+            return {'start': None, 'end': None, 'duration_hours': None}
         return {
             'start': datetime.fromtimestamp(min(timestamps), tz=timezone.utc).isoformat(),
             'end': datetime.fromtimestamp(max(timestamps), tz=timezone.utc).isoformat(),
@@ -420,6 +422,12 @@ def main():
     if args.verbose:
         logger.setLevel(logging.DEBUG)
 
+    # FIX: Validate that at least one input source is provided
+    if not args.input and not args.dir:
+        logger.error("No input source specified. Use --input <file> or --dir <directory>")
+        print("Error: No input source specified. Provide --input <file> or --dir <directory>", file=sys.stderr)
+        return 1
+
     aggregator = LogAggregator()
 
     if args.input:
@@ -429,10 +437,18 @@ def main():
                 count = aggregator.process_file(path)
                 logger.info(f"Processed {path}: {count} entries")
         else:
+            if not os.path.exists(args.input):
+                logger.error(f"Input file not found: {args.input}")
+                print(f"Error: Input file not found: {args.input}", file=sys.stderr)
+                return 1
             count = aggregator.process_file(args.input)
             logger.info(f"Processed {args.input}: {count} entries")
 
     if args.dir:
+        if not os.path.isdir(args.dir):
+            logger.error(f"Directory not found: {args.dir}")
+            print(f"Error: Directory not found: {args.dir}", file=sys.stderr)
+            return 1
         count = aggregator.process_directory(args.dir)
         logger.info(f"Processed directory {args.dir}: {count} entries")
 
@@ -447,7 +463,9 @@ def main():
     summary = aggregator.get_summary()
     print(f"\nSummary:")
     print(f"  Total entries: {summary['total_entries']:,}")
-    print(f"  Time range: {summary.get('time_range', {}).get('start', 'N/A')} to {summary.get('time_range', {}).get('end', 'N/A')}")
+    # FIX: Safe access to time_range - handles None and dict with None values
+    time_range = summary.get('time_range') or {}
+    print(f"  Time range: {time_range.get('start') or 'N/A'} to {time_range.get('end') or 'N/A'}")
     print(f"  Error rate: {summary.get('error_rate', 0)}%")
     print(f"  By level: {', '.join(f'{k}={v}' for k, v in summary.get('by_level', {}).items())}")
     print(f"  By service: {', '.join(f'{k}={v}' for k, v in summary.get('by_service', {}).items())}")
